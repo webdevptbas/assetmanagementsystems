@@ -165,7 +165,7 @@ class InventoryController extends Controller
             'small_asset_type_id' => 'required|exists:small_asset_types,id',
             'stok'                => 'required|integer|min:0',
             'satuan'              => 'required|string',
-            'pcs_per_box'         => 'required|integer|min:1',
+            'pcs_per_box'         => 'nullable|integer|min:1',
             'keterangan'          => 'nullable|string',
         ]);
 
@@ -182,7 +182,7 @@ class InventoryController extends Controller
             'small_asset_type_id' => 'required|exists:small_asset_types,id',
             'stok'                => 'required|integer|min:0',
             'satuan'              => 'required|string',
-            'pcs_per_box'         => 'required|integer|min:1',
+            'pcs_per_box'         => 'nullable|integer|min:1',
             'keterangan'          => 'nullable|string',
         ]);
 
