@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -11,6 +11,14 @@ const props = defineProps({
     smallAssetTypes: { type: Array, default: () => [] },
     filters: Object,
 })
+
+const openMoreId = ref(null)
+
+
+const closeMore = () => { openMoreId.value = null }
+
+onMounted(() => document.addEventListener('click', closeMore))
+onUnmounted(() => document.removeEventListener('click', closeMore))
 
 const activeTab = ref(props.tab ?? 'large')
 
@@ -324,10 +332,35 @@ const openRestock = (asset) => {
     showRestockModal.value = true
 }
 
-const openMoreId = ref(null)
+const moreMenuStyle = ref({})
 
-const toggleMore = (id) => {
-    openMoreId.value = openMoreId.value === id ? null : id
+const toggleMore = (id, event) => {
+    if (openMoreId.value === id) {
+        openMoreId.value = null
+        return
+    }
+    openMoreId.value = id
+
+    const btn = event?.target?.closest('button')
+    if (btn) {
+        const rect = btn.getBoundingClientRect()
+        const menuHeight = 136 // estimasi tinggi menu
+        const spaceBelow = window.innerHeight - rect.bottom
+
+        if (spaceBelow < menuHeight) {
+            // Tampil ke atas
+            moreMenuStyle.value = {
+                top: `${rect.top - menuHeight}px`,
+                left: `${rect.left}px`,
+            }
+        } else {
+            // Tampil ke bawah
+            moreMenuStyle.value = {
+                top: `${rect.bottom + 4}px`,
+                left: `${rect.left}px`,
+            }
+        }
+    }
 }
 
 
@@ -547,7 +580,7 @@ const submitRestock = () => {
                             <td class="px-5 py-3">
                                 <div class="relative">
                                     <button
-                                        @click="toggleMore(asset.id)"
+                                        @click.stop="toggleMore(asset.id, $event)"
                                         class="flex items-center gap-1 text-xs text-zinc-600 hover:text-zinc-800 font-medium border border-zinc-200 px-2.5 py-1.5 rounded-lg hover:bg-zinc-50 transition-colors"
                                     >
                                         More
@@ -555,25 +588,28 @@ const submitRestock = () => {
                                             <polyline points="6 9 12 15 18 9"/>
                                         </svg>
                                     </button>
-                                    <div v-if="openMoreId === asset.id"
-                                        class="absolute right-0 z-10 mt-1 w-36 bg-white border border-zinc-200 rounded-lg shadow-lg overflow-hidden">
-                                        <button @click="openDetailSmall(asset); openMoreId = null"
-                                            class="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 transition-colors">
-                                            Detail
-                                        </button>
-                                        <button @click="openRestock(asset); openMoreId = null"
-                                            class="w-full text-left px-3 py-2 text-xs text-emerald-600 hover:bg-zinc-50 transition-colors">
-                                            Restock
-                                        </button>
-                                        <button @click="openEditSmall(asset); openMoreId = null"
-                                            class="w-full text-left px-3 py-2 text-xs text-blue-600 hover:bg-zinc-50 transition-colors">
-                                            Edit
-                                        </button>
-                                        <button @click="openDeleteSmall(asset); openMoreId = null"
-                                            class="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-zinc-50 transition-colors">
-                                            Hapus
-                                        </button>
-                                    </div>
+                                    <Teleport to="body">
+                                        <div v-if="openMoreId === asset.id"
+                                            class="fixed z-50 w-36 bg-white border border-zinc-200 rounded-lg shadow-lg overflow-hidden"
+                                            :style="moreMenuStyle">
+                                            <button @click="openDetailSmall(asset); openMoreId = null"
+                                                class="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 transition-colors">
+                                                Detail
+                                            </button>
+                                            <button @click="openRestock(asset); openMoreId = null"
+                                                class="w-full text-left px-3 py-2 text-xs text-emerald-600 hover:bg-zinc-50 transition-colors">
+                                                Restock
+                                            </button>
+                                            <button @click="openEditSmall(asset); openMoreId = null"
+                                                class="w-full text-left px-3 py-2 text-xs text-blue-600 hover:bg-zinc-50 transition-colors">
+                                                Edit
+                                            </button>
+                                            <button @click="openDeleteSmall(asset); openMoreId = null"
+                                                class="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-zinc-50 transition-colors">
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    </Teleport>
                                 </div>
                             </td>
                         </tr>
