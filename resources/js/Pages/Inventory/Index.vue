@@ -278,6 +278,7 @@ const smallForm = useForm({
     nama_barang: '',
     small_asset_type_id: '',
     stok: 0,
+    jumlah_box: '',
     satuan: '',
     pcs_per_box: '',
     keterangan: '',
@@ -313,11 +314,20 @@ const openEditSmall = (asset) => {
     selectedSmall.value = asset
     smallForm.nama_barang         = asset.nama_barang
     smallForm.small_asset_type_id = asset.small_asset_type_id
-    smallForm.stok                = asset.stok
     smallForm.satuan              = asset.satuan ?? ''
     smallForm.pcs_per_box         = asset.pcs_per_box ?? ''
     smallForm.keterangan          = asset.keterangan ?? ''
     selectedSmallTypeName.value   = asset.asset_type?.nama ?? ''
+
+    // Kalau satuan box, tampilkan dalam box
+    if (asset.satuan === 'box' && asset.pcs_per_box) {
+        smallForm.jumlah_box = Math.floor(asset.stok / asset.pcs_per_box)
+        smallForm.stok = 0
+    } else {
+        smallForm.stok = asset.stok
+        smallForm.jumlah_box = ''
+    }
+
     showSmallModal.value = true
 }
 
@@ -898,11 +908,23 @@ const submitRestock = () => {
                         <p v-if="smallForm.errors.small_asset_type_id" class="text-red-500 text-xs mt-1">{{ smallForm.errors.small_asset_type_id }}</p>
                     </div>
 
-                    <!-- Stok -->
+                    <!-- Stok / Jumlah Box -->
                     <div>
-                        <label class="block text-xs font-medium text-zinc-500 mb-1.5">Stok Awal</label>
-                        <input v-model="smallForm.stok" type="number" min="0" placeholder="0"
-                            class="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 focus:outline-none focus:border-zinc-400" />
+                        <label class="block text-xs font-medium text-zinc-500 mb-1.5">
+                            {{ smallForm.satuan === 'box' ? 'Jumlah Box' : 'Stok Awal' }}
+                        </label>
+                        <input
+                            v-if="smallForm.satuan === 'box'"
+                            v-model="smallForm.jumlah_box"
+                            type="number" min="0" placeholder="0"
+                            class="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 focus:outline-none focus:border-zinc-400"
+                        />
+                        <input
+                            v-else
+                            v-model="smallForm.stok"
+                            type="number" min="0" placeholder="0"
+                            class="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 focus:outline-none focus:border-zinc-400"
+                        />
                         <p v-if="smallForm.errors.stok" class="text-red-500 text-xs mt-1">{{ smallForm.errors.stok }}</p>
                     </div>
 

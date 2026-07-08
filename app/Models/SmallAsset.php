@@ -21,8 +21,11 @@ class SmallAsset extends Model
     public static function generateKode(): string
     {
         $today = now()->format('Ymd');
-        $count = self::whereDate('created_at', today())
-                    ->count() + 1;
+        $latest = self::whereDate('created_at', today())
+                    ->orderByDesc('id')
+                    ->first();
+
+        $count = $latest ? (int) substr($latest->kode_barang, -3) + 1 : 1;
 
         return 'BMCK-' . $today . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
     }

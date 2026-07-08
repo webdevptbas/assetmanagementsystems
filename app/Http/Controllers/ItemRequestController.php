@@ -35,16 +35,22 @@ class ItemRequestController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'employee_id'      => 'required|exists:employees,id',
-            'inventory_item_id'=> 'required|exists:small_assets,id',
-            'jumlah'           => 'required|integer|min:1',
+            'employee_id'       => 'required|exists:employees,id',
+            'inventory_item_id' => 'required|exists:small_assets,id',
+            'jumlah'            => 'required|integer|min:1',
         ]);
 
         $item = SmallAsset::find($request->inventory_item_id);
 
-        if ($item->stok < $request->jumlah) {
+        // Hitung jumlah dalam pcs
+        $jumlahPcs = $request->jumlah;
+
+        if ($item->stok < $jumlahPcs) {
+            $tersedia = $item->satuan === 'box' && $item->pcs_per_box ? floor($item->stok / $item->pcs_per_box) . ' box (' . $item->stok . ' pcs)'
+                : $item->stok;
+
             return back()->withErrors([
-                'jumlah' => 'Stok tidak mencukupi. Stok tersedia: ' . $item->stok,
+                'jumlah' => 'Stok tidak mencukupi. Stok tersedia: ' . $tersedia,
             ]);
         }
 
@@ -54,16 +60,23 @@ class ItemRequestController extends Controller
             'jumlah'            => $request->jumlah,
         ]);
 
-        // Kurangi stok otomatis
-        $item->decrement('stok', $request->jumlah);
+        // Kurangi stok dalam pcs
+        $item->decrement('stok', $jumlahPcs);
 
         return back()->with('success', 'Permintaan barang berhasil ditambahkan.');
     }
 
     public function destroy(ItemRequest $itemRequest)
     {
-        // Kembalikan stok saat request dihapus
-        $itemRequest->item->increment('stok', $itemRequest->jumlah);
+        $item = $itemRequest->item;
+        
+        // Kembalikan stok dalam pcs
+        $jumlahPcs = $itemRequest->jumlah;
+        if ($item->satuan === 'box' && $item->pcs_per_box) {
+            $jumlahPcs = $itemRequest->jumlah * $item->pcs_per_box;
+        }
+
+        $item->increment('stok', $jumlahPcs);
         $itemRequest->delete();
 
         return back()->with('success', 'Permintaan berhasil dihapus.');

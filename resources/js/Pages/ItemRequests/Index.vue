@@ -275,7 +275,9 @@ const exportExcel = () => {
                                         </div>
                                         <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md"
                                             :class="item.stok < 10 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'">
-                                            Stok: {{ item.stok }}
+                                            {{ item.satuan === 'box' && item.pcs_per_box
+                                                ? `${Math.floor(item.stok / item.pcs_per_box)} box (${item.stok} pcs)`
+                                                : `Stok: ${item.stok}` }}
                                         </span>
                                     </div>
                                 </div>

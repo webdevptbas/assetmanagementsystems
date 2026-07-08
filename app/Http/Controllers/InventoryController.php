@@ -163,14 +163,24 @@ class InventoryController extends Controller
         $request->validate([
             'nama_barang'         => 'required|string',
             'small_asset_type_id' => 'required|exists:small_asset_types,id',
-            'stok'                => 'required|integer|min:0',
             'satuan'              => 'required|string',
             'pcs_per_box'         => 'nullable|integer|min:1',
             'keterangan'          => 'nullable|string',
+            'stok'                => 'nullable|integer|min:0',
+            'jumlah_box'          => 'nullable|integer|min:0',
         ]);
 
-        $data = $request->only(['nama_barang', 'small_asset_type_id', 'stok', 'satuan', 'pcs_per_box', 'keterangan']);
+        // Hitung stok dalam pcs
+        if ($request->satuan === 'box' && $request->pcs_per_box) {
+            $stok = ($request->jumlah_box ?? 0) * $request->pcs_per_box;
+        } else {
+            $stok = $request->stok ?? 0;
+        }
+
+        $data = $request->only(['nama_barang', 'small_asset_type_id', 'satuan', 'pcs_per_box', 'keterangan']);
+        $data['stok'] = $stok;
         $data['kode_barang'] = SmallAsset::generateKode();
+
         SmallAsset::create($data);
         return back()->with('success', 'Asset kecil berhasil ditambahkan.');
     }
@@ -180,13 +190,32 @@ class InventoryController extends Controller
         $request->validate([
             'nama_barang'         => 'required|string',
             'small_asset_type_id' => 'required|exists:small_asset_types,id',
-            'stok'                => 'required|integer|min:0',
             'satuan'              => 'required|string',
             'pcs_per_box'         => 'nullable|integer|min:1',
             'keterangan'          => 'nullable|string',
+            'stok'                => 'nullable|integer|min:0',
+            'jumlah_box'          => 'nullable|integer|min:0',
         ]);
 
-        $smallAsset->update($request->only(['nama_barang', 'small_asset_type_id', 'stok', 'satuan', 'pcs_per_box', 'keterangan']));
+        // Hitung ulang stok
+        if ($request->satuan === 'box' && $request->pcs_per_box) {
+            $stok = ($request->jumlah_box ?? 0) * $request->pcs_per_box;
+        } else {
+            $stok = $request->stok ?? 0;
+        }
+
+        $data = $request->only([
+            'nama_barang',
+            'small_asset_type_id',
+            'satuan',
+            'pcs_per_box',
+            'keterangan'
+        ]);
+
+        $data['stok'] = $stok;
+
+        $smallAsset->update($data);
+
         return back()->with('success', 'Asset kecil berhasil diupdate.');
     }
 
