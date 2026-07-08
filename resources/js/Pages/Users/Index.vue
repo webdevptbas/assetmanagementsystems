@@ -136,7 +136,7 @@ const confirmDelete = () => {
                         <td class="px-5 py-3 text-zinc-400 text-xs">
                             {{ (users.current_page - 1) * users.per_page + index + 1 }}
                         </td>
-                        <td class="px-5 py-3 font-medium text-zinc-900">{{ user.name }}</td>
+                        <td class="px-5 py-3 text-zinc-600">{{ user.name }}</td>
                         <td class="px-5 py-3 text-zinc-500">{{ user.email }}</td>
                         <td class="px-5 py-3">
                             <span
