@@ -154,6 +154,14 @@ class InventoryController extends Controller
 
     public function destroyLargeAsset(LargeAsset $largeAsset)
     {
+        $sedangDipinjam = \App\Models\AssetLoan::where('large_asset_id', $largeAsset->id)
+            ->where('status', 'dipinjam')
+            ->exists();
+
+        if ($sedangDipinjam) {
+            return back()->withErrors(['delete_error' => 'Asset ini sedang dipinjam, tidak bisa dihapus.']);
+        }
+
         $largeAsset->delete();
         return back()->with('success', 'Asset berhasil dihapus.');
     }
@@ -221,6 +229,13 @@ class InventoryController extends Controller
 
     public function destroySmallAsset(SmallAsset $smallAsset)
     {
+        $adaPermintaan = \App\Models\ItemRequest::where('inventory_item_id', $smallAsset->id)
+            ->exists();
+
+        if ($adaPermintaan) {
+            return back()->withErrors(['delete_error' => 'Barang ini masih memiliki riwayat permintaan, tidak bisa dihapus.']);
+        }
+
         $smallAsset->delete();
         return back()->with('success', 'Asset kecil berhasil dihapus.');
     }

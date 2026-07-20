@@ -1,7 +1,11 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
-import { router, useForm } from '@inertiajs/vue3'
+import { router, useForm, usePage } from '@inertiajs/vue3'
+
+const page = usePage()
+const flashError = computed(() => page.props.flash?.error ?? null)
+const deleteError = ref(null)
 
 const props = defineProps({
     tab: String,
@@ -261,7 +265,15 @@ const submitLarge = () => {
 
 const confirmDeleteLarge = () => {
     router.delete(route('large-assets.destroy', selectedLarge.value.id), {
-        onSuccess: () => { showLargeDeleteModal.value = false },
+        preserveScroll: true,
+        onSuccess: () => { 
+            showLargeDeleteModal.value = false 
+        },
+        onError: (errors) => { 
+            showLargeDeleteModal.value = false
+            deleteError.value = errors.delete_error ?? null
+            setTimeout(() => { deleteError.value = null }, 4000)
+        },
     })
 }
 
@@ -396,7 +408,15 @@ const submitSmall = () => {
 
 const confirmDeleteSmall = () => {
     router.delete(route('small-assets.destroy', selectedSmall.value.id), {
-        onSuccess: () => { showSmallDeleteModal.value = false },
+        preserveScroll: true,
+        onSuccess: () => { 
+            showSmallDeleteModal.value = false 
+        },
+        onError: (errors) => { 
+            showSmallDeleteModal.value = false
+            deleteError.value = errors.delete_error ?? null
+            setTimeout(() => { deleteError.value = null }, 4000)
+        },
     })
 }
 
@@ -410,6 +430,22 @@ const submitRestock = () => {
 <template>
     <AppLayout>
         <template #title>Inventaris Barang</template>
+
+
+        <div v-if="deleteError"
+            class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {{ deleteError }}
+            </div>
+            <button @click="deleteError = null" class="text-red-400 hover:text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
 
         <!-- Tabs -->
         <div class="flex gap-1 bg-zinc-100 p-1 rounded-xl w-fit mb-6">

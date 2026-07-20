@@ -11,9 +11,10 @@ class Employee extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'nama', 'nik', 'jabatan', 'divisi',
+        'nama', 'nik', 'nip', 'jabatan', 'divisi',
         'alamat', 'no_bpjs_ketenagakerjaan', 'no_bpjs_kesehatan',
-        'jenis_kelamin', 'foto',    
+        'jenis_kelamin', 'foto',
+        'kontak_darurat_nama',
     ];
 
     public function transfers(){

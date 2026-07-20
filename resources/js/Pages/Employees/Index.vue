@@ -1,7 +1,11 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { ref, watch, computed } from 'vue'
-import { router, useForm } from '@inertiajs/vue3'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { router, useForm, usePage } from '@inertiajs/vue3'
+
+const page = usePage()
+const flashError = computed(() => page.props.flash?.error ?? null)
+const deleteError = ref(null)
 
 const props = defineProps({
     employees: Object,
@@ -28,13 +32,15 @@ const selectedEmployee = ref(null)
 const form = useForm({
     nama: '',
     nik: '',
+    nip: '',
     jabatan: '',
     divisi: '',
     alamat: '',
     no_bpjs_ketenagakerjaan: '',
     no_bpjs_kesehatan: '',
     jenis_kelamin: '',
-    foto: '',
+    foto: null,
+    kontak_darurat_nama: '',
 })
 
 // Dropdown Jabatan
@@ -68,6 +74,8 @@ const selectDivisi = (val) => {
 const openCreate = () => {
     isEdit.value = false
     form.reset()
+    form._method = ''
+    fotoPreview.value = null
     showModal.value = true
 }
 
@@ -83,6 +91,8 @@ const openEdit = (employee) => {
     form.no_bpjs_kesehatan = employee.no_bpjs_kesehatan ?? ''
     form.jenis_kelamin = employee.jenis_kelamin ?? ''
     form.foto = null
+    form.nip = employee.nip ?? ''
+    form.kontak_darurat_nama = employee.kontak_darurat_nama ?? ''
     fotoPreview.value = employee.foto ? '/storage/${employee.foto}' : null
     form._method = 'PUT'
     showModal.value = true
@@ -114,7 +124,7 @@ const submit = () => {
         })).post(route('employees.update', selectedEmployee.value.id), {
             forceFormData: true,
             onSuccess: () => { showModal.value = false; form.reset(); fotoPreview.value = null },
-        })
+        }) 
     } else {
         form.post(route('employees.store'), {
             forceFormData: true,
@@ -125,7 +135,13 @@ const submit = () => {
 
 const confirmDelete = () => {
     router.delete(route('employees.destroy', selectedEmployee.value.id), {
+        preserveScroll: true,
         onSuccess: () => { showDeleteModal.value = false },
+        onError: (errors) => {
+            showDeleteModal.value = false
+            deleteError.value = errors.delete_error ?? null
+            setTimeout(() => { deleteError.value = null }, 4000)
+        },
     })
 }
 
@@ -141,7 +157,23 @@ const onFotoChange = (e) => {
 
 <template>
     <AppLayout>
+        
         <template #title>Data Karyawan</template>
+
+        <div v-if="deleteError"
+            class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {{ deleteError }}
+            </div>
+            <button @click="deleteError = null" class="text-red-400 hover:text-red-600">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
 
         <!-- Header -->
         <div class="flex items-center justify-between mb-5">
@@ -242,6 +274,20 @@ const onFotoChange = (e) => {
                         />
                         <p v-if="form.errors.nama" class="text-red-500 text-xs mt-1">{{ form.errors.nama }}</p>
                     </div>
+
+                    <!-- NIP -->
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-zinc-500 mb-1.5">NIP</label>
+                        <input
+                            v-model="form.nip"
+                            type="text"
+                            inputmode="numeric"
+                            placeholder="Nomor Induk Pegawai"
+                            @input="form.nip = form.nip.replace(/\D/g, '')"
+                            class="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 focus:outline-none focus:border-zinc-400"
+                        />
+                    </div>
+
                     <div>
                         <label class="block text-xs font-medium text-zinc-500 mb-1.5">NIK</label>
                         <input
@@ -254,6 +300,7 @@ const onFotoChange = (e) => {
                         />
                         <p v-if="form.errors.nik" class="text-red-500 text-xs mt-1">{{ form.errors.nik }}</p>
                     </div>
+
                     <!-- Jabatan -->
                     <div class="relative">
                         <label class="block text-xs font-medium text-zinc-500 mb-1.5">
@@ -329,12 +376,23 @@ const onFotoChange = (e) => {
                     </div>
                     <!-- Alamat -->
                     <div>
-                        <label class="block text-xs font-medium text-zinc-500 mb-1.5">Alamat <span class="text-zinc-300">(opsional)</span></label>
+                        <label class="block text-xs font-medium text-zinc-500 mb-1.5">Alamat</label>
                         <textarea
                             v-model="form.alamat"
                             rows="2"
                             placeholder="Alamat lengkap"
                             class="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 focus:outline-none focus:border-zinc-400 resize-none"
+                        />
+                    </div>
+
+                    <!-- Kontak Darurat -->
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-zinc-500 mb-1.5">Kontak Darurat <span class="text-zinc-300">(opsional - format: Nama / No. HP)</span></label>
+                        <input
+                            v-model="form.kontak_darurat_nama"
+                            type="text"
+                            placeholder="Contoh: Budi / 08123456789"
+                            class="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-800 focus:outline-none focus:border-zinc-400"
                         />
                     </div>
 
@@ -468,7 +526,7 @@ const onFotoChange = (e) => {
                         <p class="text-sm text-zinc-500 mt-0.5">{{ selectedDetail?.jabatan }} · {{ selectedDetail?.divisi }}</p>
                         <div class="flex items-center gap-2 mt-2">
                             <span class="inline-flex px-2.5 py-1 rounded-md text-[11px] font-semibold bg-zinc-100 text-zinc-600">
-                                NIK: {{ selectedDetail?.nik }}
+                                NIP: {{ selectedDetail?.nip ?? '-' }}
                             </span>
                             <span
                                 v-if="selectedDetail?.jenis_kelamin"
@@ -502,6 +560,13 @@ const onFotoChange = (e) => {
                     <div class="bg-zinc-50 rounded-lg p-3 col-span-2">
                         <p class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-1">Alamat</p>
                         <p class="text-sm text-zinc-800 whitespace-pre-wrap">{{ selectedDetail?.alamat ?? '-' }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-zinc-50 rounded-lg p-3">
+                            <p class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-1">Nama Kontak Darurat</p>
+                            <p class="text-sm text-zinc-800">{{ selectedDetail?.kontak_darurat_nama ?? '-' }}</p>
+                        </div>
                     </div>
                 </div>
 

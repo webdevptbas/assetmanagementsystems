@@ -24,7 +24,7 @@ class EmployeeController extends Controller
         $divisions = \App\Models\Division::orderBy('nama')->get();
         $positions = \App\Models\Position::orderBy('nama')->get();
 
-        // Ambil employee_id yang sudah pernah transfer
+        // Ambil employee id yang sudah pernah transfer
         $transferredIds = \App\Models\EmployeeTransfer::pluck('employee_id')->unique()->toArray();
 
         return Inertia::render('Employees/Index', [
@@ -36,20 +36,23 @@ class EmployeeController extends Controller
         ]);
     }
 
-    public function store(Request $request){
+    public function store(Request $request)
+    {
         $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'nik' => 'required|numeric|unique:employees,nik',
-            'jabatan' => 'required|string|max:255',
-            'divisi' => 'required|string|max:255',
-            'alamat' => 'nullable|string',
+            'nama'                    => 'required|string|max:255',
+            'nik'                     => 'required|numeric|unique:employees,nik',
+            'nip'                     => 'nullable|numeric',
+            'jabatan'                 => 'required|string|max:255',
+            'divisi'                  => 'required|string|max:255',
+            'alamat'                  => 'nullable|string',
             'no_bpjs_ketenagakerjaan' => 'nullable|string|max:255',
-            'no_bpjs_kesehatan' => 'nullable|string|max:255',
-            'jenis_kelamin' => 'nullable|in:Laki-laki,Perempuan',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'no_bpjs_kesehatan'       => 'nullable|string|max:255',
+            'jenis_kelamin'           => 'nullable|in:Laki-laki,Perempuan',
+            'foto'                    => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'kontak_darurat_nama'     => 'nullable|string|max:255',
         ]);
 
-        if ($request->hasFile('foto')){
+        if ($request->hasFile('foto')) {
             $validated['foto'] = $request->file('foto')->store('employees', 'public');
         }
 
@@ -57,25 +60,28 @@ class EmployeeController extends Controller
         return back()->with('success', 'Data Karyawan Berhasil Ditambahkan!');
     }
 
-    public function update(Request $request, Employee $employee){
+    public function update(Request $request, Employee $employee)
+    {
         $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'nik' => ['required', 'numeric', Rule::unique('employees', 'nik')->ignore($employee->id)],
-            'jabatan' => 'required|string|max:255',
-            'divisi' => 'required|string|max:255',
-            'alamat' => 'nullable|string',
+            'nama'                    => 'required|string|max:255',
+            'nik'                     => ['required', 'numeric', Rule::unique('employees', 'nik')->ignore($employee->id)],
+            'nip'                     => 'nullable|numeric',
+            'jabatan'                 => 'required|string|max:255',
+            'divisi'                  => 'required|string|max:255',
+            'alamat'                  => 'nullable|string',
             'no_bpjs_ketenagakerjaan' => 'nullable|string|max:255',
-            'no_bpjs_kesehatan' => 'nullable|string|max:255',
-            'jenis_kelamin' => 'nullable|in:Laki-laki,Perempuan',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'no_bpjs_kesehatan'       => 'nullable|string|max:255',
+            'jenis_kelamin'           => 'nullable|in:Laki-laki,Perempuan',
+            'foto'                    => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'kontak_darurat_nama'     => 'nullable|string|max:255',
         ]);
 
-        if ($request->hasFile('foto')){
-            if($employee->foto){
+        if ($request->hasFile('foto')) {
+            if ($employee->foto) {
                 \Storage::disk('public')->delete($employee->foto);
             }
             $validated['foto'] = $request->file('foto')->store('employees', 'public');
-        }else{
+        } else {
             unset($validated['foto']);
         }
 
@@ -83,7 +89,23 @@ class EmployeeController extends Controller
         return back()->with('success', 'Data Karyawan Berhasil Diupdate!');
     }
 
-    public function destroy(Employee $employee){
+    public function destroy(Employee $employee)
+    {
+        $hasPeminjaman = \App\Models\AssetLoan::where('employee_id', $employee->id)
+            ->where('status', 'dipinjam')
+            ->exists();
+
+        $hasPermintaan = \App\Models\ItemRequest::where('employee_id', $employee->id)
+            ->exists();
+
+        if ($hasPeminjaman) {
+            return back()->withErrors(['delete_error' => 'Karyawan ini masih memiliki peminjaman asset yang aktif.']);
+        }
+
+        if ($hasPermintaan) {
+            return back()->withErrors(['delete_error' => 'Karyawan ini masih memiliki riwayat permintaan barang.']);
+        }
+
         $employee->delete();
         return back()->with('success', 'Data Karyawan Berhasil Dihapus!');
     }
